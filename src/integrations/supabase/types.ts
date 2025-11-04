@@ -14,6 +14,85 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_patterns: {
+        Row: {
+          day_type: string
+          frequency_score: number
+          id: string
+          last_visit_at: string
+          place_type: string
+          time_of_day: string
+          updated_at: string
+          user_id: string
+          visit_count: number
+        }
+        Insert: {
+          day_type: string
+          frequency_score?: number
+          id?: string
+          last_visit_at?: string
+          place_type: string
+          time_of_day: string
+          updated_at?: string
+          user_id: string
+          visit_count?: number
+        }
+        Update: {
+          day_type?: string
+          frequency_score?: number
+          id?: string
+          last_visit_at?: string
+          place_type?: string
+          time_of_day?: string
+          updated_at?: string
+          user_id?: string
+          visit_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_patterns_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compatibility_weights: {
+        Row: {
+          behavior_weight: number
+          data_points_count: number
+          feedback_weight: number
+          interest_weight: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          behavior_weight?: number
+          data_points_count?: number
+          feedback_weight?: number
+          interest_weight?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          behavior_weight?: number
+          data_points_count?: number
+          feedback_weight?: number
+          interest_weight?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compatibility_weights_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       connection_requests: {
         Row: {
           created_at: string
@@ -40,6 +119,53 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      location_visits: {
+        Row: {
+          created_at: string
+          day_type: string
+          id: string
+          lat: number
+          lng: number
+          place_name: string | null
+          place_type: string
+          time_of_day: string
+          user_id: string
+          visited_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_type: string
+          id?: string
+          lat: number
+          lng: number
+          place_name?: string | null
+          place_type: string
+          time_of_day: string
+          user_id: string
+          visited_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_type?: string
+          id?: string
+          lat?: number
+          lng?: number
+          place_name?: string | null
+          place_type?: string
+          time_of_day?: string
+          user_id?: string
+          visited_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_visits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       matches: {
         Row: {
@@ -92,6 +218,48 @@ export type Database = {
         }
         Relationships: []
       }
+      meetup_feedback: {
+        Row: {
+          created_at: string
+          feedback_text: string | null
+          id: string
+          match_id: string
+          rating: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          feedback_text?: string | null
+          id?: string
+          match_id: string
+          rating: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          feedback_text?: string | null
+          id?: string
+          match_id?: string
+          rating?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetup_feedback_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meetup_feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       presence: {
         Row: {
           geohash: string
@@ -118,6 +286,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          activity_fingerprint: Json | null
           auto_accept_connections: boolean | null
           availability_status: string | null
           avatar_url: string | null
@@ -136,6 +305,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          activity_fingerprint?: Json | null
           auto_accept_connections?: boolean | null
           availability_status?: string | null
           avatar_url?: string | null
@@ -154,6 +324,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          activity_fingerprint?: Json | null
           auto_accept_connections?: boolean | null
           availability_status?: string | null
           avatar_url?: string | null
@@ -182,6 +353,10 @@ export type Database = {
       generate_pair_id: {
         Args: { user_a: string; user_b: string }
         Returns: string
+      }
+      recalculate_frequency_scores: {
+        Args: { target_user_id: string }
+        Returns: undefined
       }
     }
     Enums: {
