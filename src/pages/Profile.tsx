@@ -1,33 +1,23 @@
 import { useState, useEffect } from "react";
 import { User, Clock, MapPin, Settings, Shield, Users } from "lucide-react";
 import { TabNavigation } from "@/components/TabNavigation";
-import { WeeklyPresence } from "@/components/WeeklyPresence";
+import { HeatmapDay } from "@/components/HeatmapDay";
 import { ConnectionRequestsPanel } from "@/components/ConnectionRequestsPanel";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
+import { useWeeklyPresence } from "@/hooks/useWeeklyPresence";
+import { useActivityStats } from "@/hooks/useActivityStats";
+import { useUserTrends } from "@/hooks/useUserTrends";
 import { supabase } from "@/integrations/supabase/client";
-
-const mockUserProfile = {
-  name: "You",
-  avatar: "😊",
-  tagline: "Exploring bookstores lately",
-  weeklyVisits: [2, 3, 1, 2, 3, 4, 1],
-  topActivities: [
-    { icon: "☕", name: "Café", frequency: "3×/week" },
-    { icon: "📚", name: "Reading", frequency: "2×/week" },
-    { icon: "🏃", name: "Running", frequency: "2×/week" },
-  ],
-  typicalTimes: "Evenings 6-8 PM, Weekends 10-12 AM",
-  preferences: {
-    showPresenceHistory: true,
-  },
-};
 
 const Profile = () => {
   const { user } = useAuth();
+  const { weeklyData, loading: loadingWeekly } = useWeeklyPresence();
+  const { activities, loading: loadingActivities } = useActivityStats();
+  const { trends, loading: loadingTrends } = useUserTrends();
   const [safetyCheckins, setSafetyCheckins] = useState(false);
   const [emergencyNumber, setEmergencyNumber] = useState('911');
   const [userName, setUserName] = useState<string | null>(null);
@@ -93,11 +83,10 @@ const Profile = () => {
         {/* Profile Card */}
         <div className="gradient-card rounded-3xl p-6 shadow-soft text-center">
           <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center text-4xl">
-            {mockUserProfile.avatar}
+            😊
           </div>
           <h2 className="text-xl font-bold text-foreground mb-1">{userName || 'You'}</h2>
           <p className="text-sm text-muted-foreground">{user?.email}</p>
-          <p className="text-sm text-muted-foreground mb-4">{mockUserProfile.tagline}</p>
           
           <Button variant="outline" className="rounded-full">
             Edit Profile
@@ -110,26 +99,57 @@ const Profile = () => {
             <MapPin className="w-4 h-4 text-primary" />
             Weekly Presence
           </h3>
-          <WeeklyPresence visits={mockUserProfile.weeklyVisits} />
-          <p className="text-xs text-muted-foreground mt-3 text-center">
-            Checked in {mockUserProfile.weeklyVisits.reduce((a, b) => a + b, 0)}× this week
-          </p>
+          {loadingWeekly ? (
+            <div className="text-center text-sm text-muted-foreground">Loading...</div>
+          ) : (
+            <>
+              <div className="flex gap-2 justify-between mb-2">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => {
+                  const dayData = weeklyData.find(d => d.day === index);
+                  const today = new Date().getDay();
+                  return (
+                    <HeatmapDay
+                      key={day}
+                      day={day}
+                      count={dayData?.count || 0}
+                      timeOfDay={dayData?.timeOfDay || { morning: 0, afternoon: 0, evening: 0 }}
+                      isToday={index === today}
+                    />
+                  );
+                })}
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground mb-2">
+                <span>Morning</span>
+                <span>Afternoon</span>
+                <span>Evening</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-3 text-center">
+                Checked in {weeklyData.reduce((sum, d) => sum + d.count, 0)}× this week
+              </p>
+            </>
+          )}
         </div>
 
         {/* Top Activities */}
         <div className="gradient-card rounded-3xl p-6 shadow-soft">
           <h3 className="font-semibold text-foreground mb-4">Top Activities</h3>
-          <div className="space-y-3">
-            {mockUserProfile.topActivities.map((activity, index) => (
-              <div key={index} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{activity.icon}</span>
-                  <span className="text-sm font-medium text-foreground">{activity.name}</span>
+          {loadingActivities ? (
+            <div className="text-center text-sm text-muted-foreground">Loading...</div>
+          ) : activities.length > 0 ? (
+            <div className="space-y-3">
+              {activities.map((activity, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{activity.icon}</span>
+                    <span className="text-sm font-medium text-foreground">{activity.name}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{activity.frequency}</span>
                 </div>
-                <span className="text-xs text-muted-foreground">{activity.frequency}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center">No activities tracked yet</p>
+          )}
         </div>
 
         {/* Typical Times */}
@@ -138,17 +158,29 @@ const Profile = () => {
             <Clock className="w-4 h-4 text-primary" />
             Usually Here
           </h3>
-          <p className="text-sm text-muted-foreground">{mockUserProfile.typicalTimes}</p>
+          {loadingTrends ? (
+            <div className="text-sm text-muted-foreground">Loading...</div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {trends?.typicalTimeWindow || 'Not enough data yet'}
+            </p>
+          )}
         </div>
 
-        {/* My Trends (Optional) */}
+        {/* My Trends */}
         <div className="gradient-card rounded-3xl p-6 shadow-soft">
           <h3 className="font-semibold text-foreground mb-3">My Trends</h3>
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <p>🌆 You tend to connect in evenings</p>
-            <p>☕ 65% of connections at cafés</p>
-            <p>📅 Most active on weekends</p>
-          </div>
+          {loadingTrends ? (
+            <div className="text-sm text-muted-foreground">Loading...</div>
+          ) : trends ? (
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>🌆 You tend to connect in {trends.typicalTimeWindow.split('-')[0].trim()}</p>
+              <p>☕ {trends.connectionStats}</p>
+              <p>📅 Most active on {trends.mostActiveDay}</p>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Not enough data yet</p>
+          )}
         </div>
 
         {/* Connection Requests */}
